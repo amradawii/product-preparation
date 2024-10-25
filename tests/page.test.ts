@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
+import '@testing-library/svelte/vitest';
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import Page from '../src/routes/+page.svelte';
