@@ -3,9 +3,11 @@ import path from 'node:path';
 import { init as initAvifDecode } from '@jsquash/avif/decode';
 import { init as initJpegDecode } from '@jsquash/jpeg/decode';
 import { init as initPngDecode } from '@jsquash/png/decode';
+import { initResize } from '@jsquash/resize';
 import { init as initWebpDecode } from '@jsquash/webp/decode';
 
-let initialized = false;
+let decodersInitialized = false;
+let resizeInitialized = false;
 
 class NodeImageData {
   readonly data: Uint8ClampedArray;
@@ -40,7 +42,7 @@ async function loadWasmModule(relativeFromNodeModules: string): Promise<WebAssem
 
 export async function initDecodersForNode(): Promise<void> {
   ensureNodeImageData();
-  if (initialized) return;
+  if (decodersInitialized) return;
 
   const [jpegMod, pngBuf, webpMod, avifMod] = await Promise.all([
     loadWasmModule('@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm'),
@@ -58,5 +60,19 @@ export async function initDecodersForNode(): Promise<void> {
     initAvifDecode(avifMod)
   ]);
 
-  initialized = true;
+  decodersInitialized = true;
+}
+
+export async function initResizeForNode(): Promise<void> {
+  ensureNodeImageData();
+  if (resizeInitialized) return;
+
+  const resizeBuf = await readFile(
+    path.resolve(
+      process.cwd(),
+      'node_modules/@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm'
+    )
+  );
+  await initResize(resizeBuf);
+  resizeInitialized = true;
 }

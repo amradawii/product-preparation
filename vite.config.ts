@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [sveltekit(), svelteTesting({ autoCleanup: false })],
   optimizeDeps: {
-    exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/png', '@jsquash/webp']
+    exclude: ['@jsquash/avif', '@jsquash/jpeg', '@jsquash/png', '@jsquash/resize', '@jsquash/webp']
   },
   worker: {
     format: 'es'
