@@ -5,9 +5,12 @@ import { init as initJpegDecode } from '@jsquash/jpeg/decode';
 import { init as initPngDecode } from '@jsquash/png/decode';
 import { initResize } from '@jsquash/resize';
 import { init as initWebpDecode } from '@jsquash/webp/decode';
+import { init as initWebpEncode } from '@jsquash/webp/encode';
+import { simd } from 'wasm-feature-detect';
 
 let decodersInitialized = false;
 let resizeInitialized = false;
+let webpEncodeInitialized = false;
 
 class NodeImageData {
   readonly data: Uint8ClampedArray;
@@ -75,4 +78,17 @@ export async function initResizeForNode(): Promise<void> {
   );
   await initResize(resizeBuf);
   resizeInitialized = true;
+}
+
+export async function initWebpEncodeForNode(): Promise<void> {
+  ensureNodeImageData();
+  if (webpEncodeInitialized) return;
+
+  const hasSimd = await simd();
+  const wasmFile = hasSimd
+    ? '@jsquash/webp/codec/enc/webp_enc_simd.wasm'
+    : '@jsquash/webp/codec/enc/webp_enc.wasm';
+  const mod = await loadWasmModule(wasmFile);
+  await initWebpEncode(mod);
+  webpEncodeInitialized = true;
 }
