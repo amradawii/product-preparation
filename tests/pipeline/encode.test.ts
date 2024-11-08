@@ -5,9 +5,13 @@ import { decodeImage } from '../../src/lib/pipeline/decode';
 import { detectFormat, inspectImage } from '../../src/lib/pipeline/detect';
 import {
   encodeWebp,
+  encodeWebpAtQuality,
+  encodeWebpToTargetSize,
   listWebpChunks,
   PRESET_QUALITY,
-  stripWebpMetadata
+  stripWebpMetadata,
+  TARGET_SIZE_MAX_ENCODES,
+  TARGET_SIZE_MIN_QUALITY
 } from '../../src/lib/pipeline/encode';
 import { readExifOrientation } from '../../src/lib/pipeline/orient';
 import { resizeAndCompose } from '../../src/lib/pipeline/resize';
@@ -151,5 +155,62 @@ describe('encodeWebp', () => {
     expect(listWebpChunks(stripped)).not.toContain('XMP ');
     expect(detectFormat(stripped)).toBe('webp');
     expect(inspectImage(stripped)).toMatchObject({ format: 'webp', width: 24, height: 24 });
+  });
+
+  it('hits a reachable target size in at most 7 encodes without dropping below the q=50 floor', async () => {
+    const img = makeRichTestImage(320, 240);
+    const atMax = await encodeWebpAtQuality(img, PRESET_QUALITY.best);
+    const atFloor = await encodeWebpAtQuality(img, TARGET_SIZE_MIN_QUALITY);
+    expect(atFloor.byteLength).toBeLessThan(atMax.byteLength);
+
+    // Pick a midpoint target between q=50 and q=82 so binary search must work.
+    const targetBytes = Math.round((atFloor.byteLength + atMax.byteLength) / 2);
+    const result = await encodeWebp(img, { preset: 'target', targetBytes });
+
+    expect(result.targetReached).toBe(true);
+    expect(result.notice).toBeUndefined();
+    expect(result.bytes.byteLength).toBeLessThanOrEqual(targetBytes);
+    expect(result.quality).toBeGreaterThanOrEqual(TARGET_SIZE_MIN_QUALITY);
+    expect(result.quality).toBeLessThanOrEqual(PRESET_QUALITY.best);
+    expect(result.encodeCount).toBeLessThanOrEqual(TARGET_SIZE_MAX_ENCODES);
+  });
+
+  it('fast-paths in 1 encode when q=82 is already under the target size', async () => {
+    const img = makeRichTestImage(64, 64);
+    const result = await encodeWebp(img, { preset: 'target', targetBytes: 150 * 1024 });
+
+    expect(result.targetReached).toBe(true);
+    expect(result.quality).toBe(PRESET_QUALITY.best);
+    expect(result.encodeCount).toBe(1);
+    expect(result.notice).toBeUndefined();
+  });
+
+  it('stops at the q=50 floor and reports a clear notice when the target is impossible', async () => {
+    const img = makeRichTestImage(320, 240);
+    const impossibleTarget = 1024; // 1 KB is far below q=50 output for a 320x240 textured image
+    const result = await encodeWebp(img, { preset: 'target', targetBytes: impossibleTarget });
+
+    expect(result.targetReached).toBe(false);
+    expect(result.quality).toBe(TARGET_SIZE_MIN_QUALITY);
+    expect(result.encodeCount).toBeLessThanOrEqual(TARGET_SIZE_MAX_ENCODES);
+    expect(result.notice).toMatch(/^Could not reach 1 KB; smallest good result is \d+ KB$/);
+  });
+
+  it('never encodes below minQuality or more than 7 times across synthetic size curves', async () => {
+    const dummy: RawImageData = { width: 4, height: 4, data: new Uint8ClampedArray(64) };
+    const tried: number[] = [];
+
+    // Synthetic monotonic curve: size(q) = q * 3000 bytes (so q=50 -> 150KB, q=63 -> 189KB, q=82 -> 246KB)
+    const result = await encodeWebpToTargetSize(dummy, 190 * 1024, {
+      encoder: async (_img, q) => {
+        tried.push(q);
+        return new Uint8Array(q * 3000);
+      }
+    });
+
+    expect(result.targetReached).toBe(true);
+    expect(result.quality).toBe(64); // 64 * 3000 = 192,000 <= 194,560 (190 * 1024), 65 * 3000 = 195,000 > target
+    expect(Math.min(...tried)).toBeGreaterThanOrEqual(TARGET_SIZE_MIN_QUALITY);
+    expect(result.encodeCount).toBeLessThanOrEqual(TARGET_SIZE_MAX_ENCODES);
   });
 });

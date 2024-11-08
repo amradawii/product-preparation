@@ -1,23 +1,39 @@
 import { PipelineError, type RawImageData } from './types';
 
-export type QualityPreset = 'best' | 'smaller' | 'lossless';
+export type QualityPreset = 'best' | 'smaller' | 'lossless' | 'target';
 
 export const PRESET_QUALITY = {
   best: 82,
   smaller: 70
 } as const;
 
+export const TARGET_SIZE_MIN_QUALITY = 50;
+export const TARGET_SIZE_MAX_QUALITY = PRESET_QUALITY.best;
+export const TARGET_SIZE_DEFAULT_KB = 150;
+export const TARGET_SIZE_MAX_ENCODES = 7;
+
 export interface EncodeOptions {
   preset: QualityPreset;
-  /** Optional explicit lossy quality (0..100); overrides preset when preset !== 'lossless'. */
+  /** Optional explicit lossy quality (0..100); overrides preset when preset is best/smaller. */
   quality?: number;
+  /** Target ceiling in bytes when preset === 'target'. */
+  targetBytes?: number;
+  /** Lowest acceptable quality when searching for targetBytes (defaults to 50). */
+  minQuality?: number;
+  /** Highest quality tried when searching for targetBytes (defaults to 82). */
+  maxQuality?: number;
 }
 
 export interface EncodedWebp {
   bytes: Uint8Array;
   quality: number;
   lossless: boolean;
+  encodeCount: number;
+  targetReached?: boolean;
+  notice?: string;
 }
+
+export type QualityEncoder = (image: RawImageData, quality: number) => Promise<Uint8Array>;
 
 function toExactImageData(image: RawImageData): ImageData {
   let buf = image.data;
@@ -59,6 +75,11 @@ function writeUint32LE(bytes: Uint8Array, offset: number, value: number): void {
   bytes[offset + 1] = (value >>> 8) & 0xff;
   bytes[offset + 2] = (value >>> 16) & 0xff;
   bytes[offset + 3] = (value >>> 24) & 0xff;
+}
+
+function formatKb(bytes: number): string {
+  const kb = Math.round(bytes / 1024);
+  return `${Math.max(1, kb)} KB`;
 }
 
 const METADATA_CHUNKS = new Set(['EXIF', 'XMP ', 'ICCP']);
@@ -146,6 +167,108 @@ export async function encodeWebpAtQuality(
   }
 }
 
+export async function encodeWebpToTargetSize(
+  image: RawImageData,
+  targetBytes: number,
+  options: {
+    minQuality?: number;
+    maxQuality?: number;
+    maxEncodes?: number;
+    encoder?: QualityEncoder;
+  } = {}
+): Promise<EncodedWebp> {
+  const target = Math.max(1024, Math.round(targetBytes));
+  const minQ = Math.max(
+    1,
+    Math.min(100, Math.round(options.minQuality ?? TARGET_SIZE_MIN_QUALITY))
+  );
+  const maxQ = Math.max(
+    minQ,
+    Math.min(100, Math.round(options.maxQuality ?? TARGET_SIZE_MAX_QUALITY))
+  );
+  const maxEncodes = Math.max(1, options.maxEncodes ?? TARGET_SIZE_MAX_ENCODES);
+  const runEncode = options.encoder ?? encodeWebpAtQuality;
+
+  let encodeCount = 0;
+
+  // Fast path: check top quality first. If visually lossless already fits, stop in 1 encode.
+  const firstBytes = await runEncode(image, maxQ);
+  encodeCount++;
+  if (firstBytes.byteLength <= target || minQ === maxQ || maxEncodes === 1) {
+    const reached = firstBytes.byteLength <= target;
+    return {
+      bytes: firstBytes,
+      quality: maxQ,
+      lossless: false,
+      encodeCount,
+      targetReached: reached,
+      notice: reached
+        ? undefined
+        : `Could not reach ${formatKb(target)}; smallest good result is ${formatKb(firstBytes.byteLength)}`
+    };
+  }
+
+  let lo = minQ;
+  let hi = maxQ - 1;
+  let bestFit: { bytes: Uint8Array; quality: number } | null = null;
+  let lowestAttempt: { bytes: Uint8Array; quality: number } = {
+    bytes: firstBytes,
+    quality: maxQ
+  };
+
+  while (lo <= hi && encodeCount < maxEncodes) {
+    const mid = Math.floor((lo + hi) / 2);
+    const bytes = await runEncode(image, mid);
+    encodeCount++;
+
+    if (mid < lowestAttempt.quality) {
+      lowestAttempt = { bytes, quality: mid };
+    }
+
+    if (bytes.byteLength <= target) {
+      bestFit = { bytes, quality: mid };
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  if (bestFit) {
+    return {
+      bytes: bestFit.bytes,
+      quality: bestFit.quality,
+      lossless: false,
+      encodeCount,
+      targetReached: true
+    };
+  }
+
+  // Ensure the quality floor itself was tested if maxEncodes budget still allows.
+  if (lowestAttempt.quality > minQ && encodeCount < maxEncodes) {
+    const floorBytes = await runEncode(image, minQ);
+    encodeCount++;
+    lowestAttempt = { bytes: floorBytes, quality: minQ };
+    if (floorBytes.byteLength <= target) {
+      return {
+        bytes: floorBytes,
+        quality: minQ,
+        lossless: false,
+        encodeCount,
+        targetReached: true
+      };
+    }
+  }
+
+  return {
+    bytes: lowestAttempt.bytes,
+    quality: lowestAttempt.quality,
+    lossless: false,
+    encodeCount,
+    targetReached: false,
+    notice: `Could not reach ${formatKb(target)}; smallest good result is ${formatKb(lowestAttempt.bytes.byteLength)}`
+  };
+}
+
 export async function encodeWebp(
   image: RawImageData,
   options: EncodeOptions
@@ -162,11 +285,20 @@ export async function encodeWebp(
       return {
         bytes: stripWebpMetadata(new Uint8Array(buffer)),
         quality: 100,
-        lossless: true
+        lossless: true,
+        encodeCount: 1
       };
     } catch {
       throw new PipelineError('ENCODE_FAILED', 'Could not encode this image as lossless WebP.');
     }
+  }
+
+  if (options.preset === 'target') {
+    const targetBytes = options.targetBytes ?? TARGET_SIZE_DEFAULT_KB * 1024;
+    return encodeWebpToTargetSize(image, targetBytes, {
+      minQuality: options.minQuality,
+      maxQuality: options.maxQuality
+    });
   }
 
   const quality = options.quality ?? PRESET_QUALITY[options.preset];
@@ -174,6 +306,7 @@ export async function encodeWebp(
   return {
     bytes,
     quality,
-    lossless: false
+    lossless: false,
+    encodeCount: 1
   };
 }
