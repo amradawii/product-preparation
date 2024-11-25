@@ -76,7 +76,7 @@ describe('drop zone and settings bar', () => {
     await fireEvent.change(input, { target: { files: [valid, tooBig] } });
 
     expect(screen.getByText(/poster\.png.*40 MB/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 image ready/i)).toBeInTheDocument();
+    expect(screen.getByText('shoe.webp')).toBeInTheDocument();
   });
 
   it('accepts images pasted from the clipboard', async () => {
@@ -98,6 +98,21 @@ describe('drop zone and settings bar', () => {
     });
 
     window.dispatchEvent(pasteEvent);
-    expect(await screen.findByText(/1 image ready/i)).toBeInTheDocument();
+    expect(await screen.findByText('clip.webp')).toBeInTheDocument();
+  });
+
+  it('shows "Apply to all images" only after settings change with an existing batch', async () => {
+    render(Page);
+
+    expect(screen.queryByRole('button', { name: 'Apply to all images' })).not.toBeInTheDocument();
+
+    const input = screen.getByLabelText('Choose images to convert') as HTMLInputElement;
+    const file = new File([new Uint8Array([1, 2, 3, 4])], 'bag.jpg', { type: 'image/jpeg' });
+    await fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.queryByRole('button', { name: 'Apply to all images' })).not.toBeInTheDocument();
+
+    await fireEvent.change(screen.getByLabelText('Size'), { target: { value: '1000' } });
+    expect(screen.getByRole('button', { name: 'Apply to all images' })).toBeInTheDocument();
   });
 });
