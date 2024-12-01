@@ -2,11 +2,11 @@
   import { onDestroy, onMount } from 'svelte';
   import {
     computeBatchStats,
-    defaultWebpName,
     revokeItemUrls,
     triggerBlobDownload,
     type BatchItem
   } from '$lib/batch';
+  import { assignUniqueName } from '$lib/pipeline/names';
   import { MAX_FILES } from '$lib/pipeline/types';
   import {
     DEFAULT_SETTINGS,
@@ -24,12 +24,14 @@
   import ResultCard from '$lib/ui/ResultCard.svelte';
   import SettingsBar from '$lib/ui/SettingsBar.svelte';
   import { ImageWorkerPool } from '$lib/worker/pool';
+  import { buildZipFilename, createStreamingZip } from '$lib/zip';
 
   let settings = $state<UserSettings>({ ...DEFAULT_SETTINGS });
   let appliedSettings = $state<UserSettings | null>(null);
   let items = $state<BatchItem[]>([]);
   let rejections = $state<FileRejection[]>([]);
   let comparingId = $state<string | null>(null);
+  let zipping = $state(false);
   let hydrated = $state(false);
 
   let pool: ImageWorkerPool | null = null;
@@ -140,16 +142,20 @@
       appliedSettings = runSettings;
     }
 
-    const created: BatchItem[] = result.accepted.map((file) => ({
-      id: `img-${nextId++}`,
-      file,
-      originalName: file.name || 'image',
-      outputName: defaultWebpName(file.name || 'image'),
-      originalBytes: file.size,
-      status: 'queued',
-      progress: 0,
-      notices: []
-    }));
+    const usedNames = new Set(items.map((i) => i.outputName.toLowerCase()));
+    const created: BatchItem[] = result.accepted.map((file) => {
+      const originalName = file.name || 'image';
+      return {
+        id: `img-${nextId++}`,
+        file,
+        originalName,
+        outputName: assignUniqueName(originalName, usedNames),
+        originalBytes: file.size,
+        status: 'queued',
+        progress: 0,
+        notices: []
+      };
+    });
 
     items = [...items, ...created];
     for (const item of created) {
@@ -239,6 +245,25 @@
     triggerBlobDownload(item.outputBlob, item.outputName);
   }
 
+  async function handleDownloadAll() {
+    if (zipping) return;
+    const ready = items.filter((item) => item.status === 'done' && item.outputBlob);
+    if (ready.length === 0) return;
+
+    zipping = true;
+    try {
+      const zipBlob = await createStreamingZip(
+        ready.map((item) => ({
+          name: item.outputName,
+          data: item.outputBlob!
+        }))
+      );
+      triggerBlobDownload(zipBlob, buildZipFilename());
+    } finally {
+      zipping = false;
+    }
+  }
+
   function dismissRejections() {
     rejections = [];
   }
@@ -314,7 +339,13 @@
           {/each}
         </div>
 
-        <BatchBar {stats} onCancelAll={handleCancelAll} onClear={handleClear} />
+        <BatchBar
+          {stats}
+          {zipping}
+          onDownloadAll={handleDownloadAll}
+          onCancelAll={handleCancelAll}
+          onClear={handleClear}
+        />
       </section>
     {/if}
   </main>
