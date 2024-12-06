@@ -486,9 +486,18 @@ function inspectSvg(bytes: Uint8Array): ImageInfo {
   };
 }
 
+function sanitizeSvgMarkup(markup: string): string {
+  return markup
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<script\b[^>]*\/>/gi, '')
+    .replace(/<foreignObject\b[^>]*>[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+}
+
 /**
  * Rewrites the root <svg> tag so browsers rasterise cleanly at exact pixel dimensions,
- * even when the input only defines a viewBox or lacks an xmlns attribute.
+ * even when the input only defines a viewBox or lacks an xmlns attribute, while stripping
+ * any embedded script or inline event handler markup as defense in depth.
  */
 export function prepareSvgMarkup(
   bytes: Uint8Array,
@@ -499,8 +508,12 @@ export function prepareSvgMarkup(
   const width = Math.max(1, Math.round(targetWidth ?? info.width));
   const height = Math.max(1, Math.round(targetHeight ?? info.height));
 
-  const original = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  const root = extractSvgRootTag(original);
+  let original = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  if (original.charCodeAt(0) === 0xfeff) {
+    original = original.slice(1);
+  }
+  const sanitized = sanitizeSvgMarkup(original);
+  const root = extractSvgRootTag(sanitized);
   if (!root) {
     throw new PipelineError('CORRUPT_IMAGE', 'This SVG file is missing a root <svg> element.');
   }
@@ -525,7 +538,7 @@ export function prepareSvgMarkup(
   tag += ` width="${width}" height="${height}"`;
   tag += selfClosing ? '/>' : '>';
 
-  const markup = original.slice(0, root.start) + tag + original.slice(root.end);
+  const markup = sanitized.slice(0, root.start) + tag + sanitized.slice(root.end);
   return { markup, width, height };
 }
 

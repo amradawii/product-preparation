@@ -151,6 +151,9 @@ async function decodeWithFallback(bytes: Uint8Array, info: ImageInfo): Promise<R
       const { default: decodePng } = await import('@jsquash/png/decode');
       try {
         const result = await decodePng(toArrayBuffer(bytes));
+        if (result.data.byteLength !== result.width * result.height * 4) {
+          throw new Error('Unexpected RGBA buffer length');
+        }
         return { width: result.width, height: result.height, data: result.data };
       } catch {
         if (info.bitDepth === 16) {
@@ -202,6 +205,8 @@ export async function decodeImage(
   const notices: string[] = [];
   if (info.format === 'gif' && info.animated) {
     notices.push('Animated GIF: first frame used');
+  } else if (info.format === 'webp' && info.animated) {
+    notices.push('Animated WebP: first frame used');
   }
 
   if (info.format === 'svg') {
