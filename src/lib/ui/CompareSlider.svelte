@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { formatSavingsLabel, type BatchItem } from '$lib/batch';
   import { formatBytes } from '$lib/settings';
 
@@ -13,10 +14,22 @@
   let position = $state(50);
   let dragging = $state(false);
   let stageEl: HTMLDivElement | undefined = $state();
+  let dialogEl: HTMLDivElement | undefined = $state();
+  let sliderEl: HTMLDivElement | undefined = $state();
 
   const savings = $derived(
     item.outputBytes !== undefined ? formatSavingsLabel(item.originalBytes, item.outputBytes) : null
   );
+
+  onMount(() => {
+    const previousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    sliderEl?.focus();
+
+    return () => {
+      previousFocus?.focus();
+    };
+  });
 
   function clampPosition(value: number): number {
     return Math.max(0, Math.min(100, value));
@@ -77,6 +90,28 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       onClose();
+      return;
+    }
+
+    if (event.key === 'Tab' && dialogEl) {
+      const focusables = Array.from(
+        dialogEl.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || !dialogEl.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialogEl.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   }
 </script>
@@ -93,10 +128,11 @@
   ></button>
 
   <div
+    bind:this={dialogEl}
     role="dialog"
     aria-modal="true"
     aria-label="Before and after comparison for {item.originalName}"
-    class="relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl"
+    class="animate-dialog-in relative z-10 flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl"
   >
     <!-- Header -->
     <div
@@ -148,7 +184,7 @@
         onpointermove={handlePointerMove}
         onpointerup={handlePointerUp}
         onpointercancel={handlePointerUp}
-        class="checkerboard relative aspect-square max-h-[68vh] w-full max-w-[68vh] select-none overflow-hidden rounded-lg border border-zinc-200 touch-none cursor-ew-resize"
+        class="checkerboard relative aspect-square max-h-[68vh] w-full max-w-[68vh] cursor-ew-resize touch-none select-none overflow-hidden rounded-lg border border-zinc-200"
       >
         <!-- After (WebP) full background layer -->
         {#if item.outputUrl}
@@ -194,6 +230,7 @@
         ></div>
 
         <div
+          bind:this={sliderEl}
           role="slider"
           tabindex="0"
           aria-label="Before and after split position"

@@ -106,7 +106,8 @@ export function formatBatchSummary(stats: BatchStats): string {
   }
 
   const savings = formatSavingsLabel(stats.totalOriginalBytes, stats.totalOutputBytes);
-  return `${countPart} · ${formatBytes(stats.totalOriginalBytes)} → ${formatBytes(stats.totalOutputBytes)} (${savings.label})`;
+  const failedPart = stats.errorCount > 0 ? ` · ${stats.errorCount} failed` : '';
+  return `${countPart}${failedPart} · ${formatBytes(stats.totalOriginalBytes)} → ${formatBytes(stats.totalOutputBytes)} (${savings.label})`;
 }
 
 export function revokeItemUrls(item: BatchItem): void {

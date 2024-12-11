@@ -124,7 +124,7 @@
     type="button"
     {disabled}
     onclick={openPicker}
-    class="flex w-full flex-col items-center justify-center rounded-xl text-center transition-colors duration-150 disabled:cursor-not-allowed {compact
+    class="flex w-full flex-col items-center justify-center rounded-xl text-center transition-[colors,transform] duration-150 active:scale-[0.998] disabled:cursor-not-allowed {compact
       ? 'px-6 py-5'
       : 'px-6 py-11 sm:py-14'}"
   >

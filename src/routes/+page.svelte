@@ -33,6 +33,8 @@
   let comparingId = $state<string | null>(null);
   let zipping = $state(false);
   let hydrated = $state(false);
+  let announcement = $state('');
+  let hadActiveWork = false;
 
   let pool: ImageWorkerPool | null = null;
   let nextId = 1;
@@ -44,6 +46,19 @@
   const comparingItem = $derived(
     comparingId ? (items.find((i) => i.id === comparingId) ?? null) : null
   );
+
+  $effect(() => {
+    if (stats.isProcessing) {
+      hadActiveWork = true;
+    } else if (hadActiveWork && stats.total > 0) {
+      hadActiveWork = false;
+      if (stats.errorCount > 0) {
+        announcement = `Batch finished: ${stats.doneCount} ready, ${stats.errorCount} failed.`;
+      } else {
+        announcement = `All ${stats.doneCount} ${stats.doneCount === 1 ? 'image is' : 'images are'} ready.`;
+      }
+    }
+  });
 
   function ensurePool(): ImageWorkerPool | null {
     if (typeof Worker === 'undefined') return null;
@@ -158,6 +173,7 @@
     });
 
     items = [...items, ...created];
+    announcement = `Added ${created.length} ${created.length === 1 ? 'image' : 'images'} for processing.`;
     for (const item of created) {
       enqueueItem(item, runSettings);
     }
@@ -230,6 +246,8 @@
     comparingId = null;
     appliedSettings = null;
     rejections = [];
+    hadActiveWork = false;
+    announcement = 'Cleared all images.';
   }
 
   function handleCompare(item: BatchItem) {
@@ -259,6 +277,7 @@
         }))
       );
       triggerBlobDownload(zipBlob, buildZipFilename());
+      announcement = `Downloaded zip with ${ready.length} ${ready.length === 1 ? 'image' : 'images'}.`;
     } finally {
       zipping = false;
     }
@@ -270,6 +289,17 @@
 </script>
 
 <div class="min-h-screen bg-zinc-50 text-zinc-900">
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-zinc-900 focus:shadow"
+  >
+    Skip to content
+  </a>
+
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+    {announcement}
+  </p>
+
   <header class="border-b border-zinc-200/80 bg-white">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3.5">
       <div class="flex items-center gap-2.5">
@@ -285,7 +315,7 @@
     </div>
   </header>
 
-  <main class="mx-auto max-w-5xl space-y-6 px-6 py-8 sm:py-10">
+  <main id="main-content" class="mx-auto max-w-5xl space-y-6 px-6 py-8 sm:py-10">
     <div>
       <h1 class="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
         Make product photos ready for your store.
@@ -347,6 +377,10 @@
           onClear={handleClear}
         />
       </section>
+    {:else}
+      <p class="text-center text-xs text-zinc-500">
+        Photos are converted to WebP right in your browser, with location and camera data removed.
+      </p>
     {/if}
   </main>
 

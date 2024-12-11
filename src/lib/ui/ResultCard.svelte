@@ -27,7 +27,7 @@
 </script>
 
 <article
-  class="group flex flex-col overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-colors duration-150 hover:border-zinc-300"
+  class="animate-card-in group flex flex-col overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-colors duration-150 hover:border-zinc-300"
 >
   <!-- Thumbnail area -->
   <div class="relative aspect-square w-full overflow-hidden border-b border-zinc-100">
@@ -95,9 +95,11 @@
           aria-valuenow={Math.round(item.progress * 100)}
         >
           <div
-            class="h-full bg-emerald-500 transition-[width] duration-200"
+            class="h-full bg-emerald-500 transition-[width] duration-200 {item.status === 'queued'
+              ? 'motion-safe:animate-pulse'
+              : ''}"
             style="width: {Math.max(
-              item.status === 'working' ? 12 : 0,
+              item.status === 'working' ? 12 : item.status === 'queued' ? 6 : 0,
               Math.round(item.progress * 100)
             )}%"
           ></div>
