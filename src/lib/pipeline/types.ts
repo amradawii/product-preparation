@@ -6,6 +6,9 @@ export const MAX_FILES = 200;
 export const MAX_FILE_BYTES = 40 * 1024 * 1024;
 export const MAX_MEGAPIXELS = 50;
 export const MAX_PIXELS = MAX_MEGAPIXELS * 1_000_000;
+export const TARGET_SIZE_DEFAULT_KB = 150;
+
+export type QualityPreset = 'best' | 'smaller' | 'lossless' | 'target';
 
 export interface RawImageData {
   width: number;

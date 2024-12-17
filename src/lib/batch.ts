@@ -14,6 +14,7 @@ export interface BatchItem {
   progress: number;
   originalUrl?: string;
   outputBlob?: Blob;
+  thumbnailUrl?: string;
   outputUrl?: string;
   outputBytes?: number;
   width?: number;
@@ -110,7 +111,7 @@ export function formatBatchSummary(stats: BatchStats): string {
   return `${countPart}${failedPart} · ${formatBytes(stats.totalOriginalBytes)} → ${formatBytes(stats.totalOutputBytes)} (${savings.label})`;
 }
 
-export function revokeItemUrls(item: BatchItem): void {
+export function revokeCompareUrls(item: BatchItem): void {
   if (item.outputUrl) {
     URL.revokeObjectURL(item.outputUrl);
     item.outputUrl = undefined;
@@ -119,6 +120,14 @@ export function revokeItemUrls(item: BatchItem): void {
     URL.revokeObjectURL(item.originalUrl);
     item.originalUrl = undefined;
   }
+}
+
+export function revokeItemUrls(item: BatchItem): void {
+  if (item.thumbnailUrl) {
+    URL.revokeObjectURL(item.thumbnailUrl);
+    item.thumbnailUrl = undefined;
+  }
+  revokeCompareUrls(item);
 }
 
 export function triggerBlobDownload(blob: Blob, filename: string): void {

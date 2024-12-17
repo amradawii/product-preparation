@@ -24,6 +24,7 @@
     if (item.stage === 'encoding') return 'Compressing...';
     return 'Working...';
   });
+  const previewUrl = $derived(item.thumbnailUrl ?? item.outputUrl);
 </script>
 
 <article
@@ -31,7 +32,7 @@
 >
   <!-- Thumbnail area -->
   <div class="relative aspect-square w-full overflow-hidden border-b border-zinc-100">
-    {#if item.status === 'done' && item.outputUrl}
+    {#if item.status === 'done' && previewUrl}
       <button
         type="button"
         onclick={() => onCompare(item)}
@@ -39,7 +40,7 @@
         class="checkerboard relative block h-full w-full cursor-pointer p-2 text-left"
       >
         <img
-          src={item.outputUrl}
+          src={previewUrl}
           alt={item.outputName}
           loading="lazy"
           decoding="async"

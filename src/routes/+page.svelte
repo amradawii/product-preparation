@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import {
     computeBatchStats,
+    revokeCompareUrls,
     revokeItemUrls,
     triggerBlobDownload,
     type BatchItem
@@ -115,17 +116,20 @@
         if (!current) return;
 
         if (outcome.status === 'done') {
-          if (current.outputUrl) {
-            URL.revokeObjectURL(current.outputUrl);
-          }
+          revokeItemUrls(current);
           const blob = new Blob([outcome.result.outputBuffer], { type: 'image/webp' });
-          const outputUrl = URL.createObjectURL(blob);
+          const thumbBlob = outcome.result.thumbnailBuffer
+            ? new Blob([outcome.result.thumbnailBuffer], { type: 'image/webp' })
+            : blob;
+          const thumbnailUrl = URL.createObjectURL(thumbBlob);
           updateItem(item.id, {
             status: 'done',
             progress: 1,
             stage: undefined,
             outputBlob: blob,
-            outputUrl,
+            thumbnailUrl,
+            outputUrl: undefined,
+            originalUrl: undefined,
             outputBytes: outcome.result.outputBytes,
             width: outcome.result.width,
             height: outcome.result.height,
@@ -187,16 +191,16 @@
     appliedSettings = runSettings;
 
     items = items.map((item) => {
-      if (item.outputUrl) {
-        URL.revokeObjectURL(item.outputUrl);
-      }
+      revokeItemUrls(item);
       return {
         ...item,
         status: 'queued',
         stage: undefined,
         progress: 0,
         outputBlob: undefined,
+        thumbnailUrl: undefined,
         outputUrl: undefined,
+        originalUrl: undefined,
         outputBytes: undefined,
         notices: [],
         error: undefined
@@ -251,11 +255,28 @@
   }
 
   function handleCompare(item: BatchItem) {
+    const patch: Partial<BatchItem> = {};
     if (!item.originalUrl) {
-      const originalUrl = URL.createObjectURL(item.file);
-      updateItem(item.id, { originalUrl });
+      patch.originalUrl = URL.createObjectURL(item.file);
+    }
+    if (!item.outputUrl && item.outputBlob) {
+      patch.outputUrl = URL.createObjectURL(item.outputBlob);
+    }
+    if (Object.keys(patch).length > 0) {
+      updateItem(item.id, patch);
     }
     comparingId = item.id;
+  }
+
+  function handleCloseCompare() {
+    if (comparingId) {
+      const target = items.find((i) => i.id === comparingId);
+      if (target) {
+        revokeCompareUrls(target);
+        updateItem(target.id, { originalUrl: undefined, outputUrl: undefined });
+      }
+    }
+    comparingId = null;
   }
 
   function handleDownload(item: BatchItem) {
@@ -385,10 +406,6 @@
   </main>
 
   {#if comparingItem}
-    <CompareSlider
-      item={comparingItem}
-      onClose={() => (comparingId = null)}
-      onDownload={handleDownload}
-    />
+    <CompareSlider item={comparingItem} onClose={handleCloseCompare} onDownload={handleDownload} />
   {/if}
 </div>

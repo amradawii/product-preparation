@@ -1,6 +1,6 @@
-import { rasterizeSvgOnMainThread } from '../pipeline/decode';
 import { assertWithinLimits, detectFormat, inspectImage } from '../pipeline/detect';
 import { computeGeometry } from '../pipeline/geometry';
+import { rasterizeSvgOnMainThread } from '../pipeline/svg';
 import { PipelineError } from '../pipeline/types';
 import type {
   ProcessSettings,

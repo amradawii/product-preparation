@@ -50,6 +50,8 @@ export interface WorkerSuccessResult {
   type: 'done';
   id: string;
   outputBuffer: ArrayBuffer;
+  /** Compact thumbnail WebP (<= 320px) for low-memory grid rendering, omitted if output is already small. */
+  thumbnailBuffer?: ArrayBuffer;
   width: number;
   height: number;
   originalWidth: number;

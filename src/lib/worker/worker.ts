@@ -1,11 +1,86 @@
 import { decodeImage } from '../pipeline/decode';
-import { encodeWebp } from '../pipeline/encode';
+import { encodeWebp, encodeWebpAtQuality } from '../pipeline/encode';
 import { computeGeometry } from '../pipeline/geometry';
 import { compositeOnCanvas, resizeAndCompose } from '../pipeline/resize';
 import { PipelineError, type RawImageData } from '../pipeline/types';
 import type { WorkerRequest, WorkerResponse, WorkerStage, WorkerSuccessResult } from './protocol';
 
+export const THUMBNAIL_MAX_PX = 320;
+const THUMBNAIL_QUALITY = 72;
+
 export type ProgressCallback = (stage: WorkerStage, progress: number) => void;
+
+/**
+ * Fast area-averaging downscale for UI grid thumbnails so large outputs (e.g. 2000x2000)
+ * do not keep multi-megabyte decoded bitmaps pinned in the page's image cache.
+ */
+export function downscaleForThumbnail(
+  image: RawImageData,
+  maxEdge = THUMBNAIL_MAX_PX
+): RawImageData | null {
+  if (image.width <= maxEdge && image.height <= maxEdge) {
+    return null;
+  }
+
+  const scale = Math.min(maxEdge / image.width, maxEdge / image.height);
+  const dstW = Math.max(1, Math.round(image.width * scale));
+  const dstH = Math.max(1, Math.round(image.height * scale));
+  const out = new Uint8ClampedArray(dstW * dstH * 4);
+  const src = image.data;
+  const srcW = image.width;
+  const srcH = image.height;
+  const ratioX = srcW / dstW;
+  const ratioY = srcH / dstH;
+
+  for (let y = 0; y < dstH; y++) {
+    const sy0 = Math.floor(y * ratioY);
+    const sy1 = Math.min(srcH, Math.max(sy0 + 1, Math.ceil((y + 1) * ratioY)));
+    for (let x = 0; x < dstW; x++) {
+      const sx0 = Math.floor(x * ratioX);
+      const sx1 = Math.min(srcW, Math.max(sx0 + 1, Math.ceil((x + 1) * ratioX)));
+
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let count = 0;
+
+      for (let sy = sy0; sy < sy1; sy++) {
+        const row = sy * srcW;
+        for (let sx = sx0; sx < sx1; sx++) {
+          const p = (row + sx) * 4;
+          const pa = src[p + 3];
+          r += src[p] * pa;
+          g += src[p + 1] * pa;
+          b += src[p + 2] * pa;
+          a += pa;
+          count++;
+        }
+      }
+
+      const d = (y * dstW + x) * 4;
+      if (a > 0) {
+        out[d] = Math.round(r / a);
+        out[d + 1] = Math.round(g / a);
+        out[d + 2] = Math.round(b / a);
+        out[d + 3] = Math.round(a / count);
+      }
+    }
+  }
+
+  return { width: dstW, height: dstH, data: out };
+}
+
+function toOwnedBuffer(bytes: Uint8Array): ArrayBuffer {
+  if (
+    bytes.buffer instanceof ArrayBuffer &&
+    bytes.byteOffset === 0 &&
+    bytes.byteLength === bytes.buffer.byteLength
+  ) {
+    return bytes.buffer;
+  }
+  return bytes.slice().buffer;
+}
 
 export async function runPipelineJob(
   request: WorkerRequest,
@@ -78,19 +153,26 @@ export async function runPipelineJob(
     notices.push(encoded.notice);
   }
 
-  // Ensure an owned tightly-sized ArrayBuffer for zero-copy transfer.
+  let thumbnailBuffer: ArrayBuffer | undefined;
+  const thumbImage = downscaleForThumbnail(composed);
+  if (thumbImage) {
+    try {
+      const thumbBytes = await encodeWebpAtQuality(thumbImage, THUMBNAIL_QUALITY);
+      thumbnailBuffer = toOwnedBuffer(thumbBytes);
+    } catch {
+      // Fall back cleanly to the main output blob if thumbnail encoding fails.
+      thumbnailBuffer = undefined;
+    }
+  }
+
   const outBytes = encoded.bytes;
-  const outputBuffer =
-    outBytes.buffer instanceof ArrayBuffer &&
-    outBytes.byteOffset === 0 &&
-    outBytes.byteLength === outBytes.buffer.byteLength
-      ? outBytes.buffer
-      : outBytes.slice().buffer;
+  const outputBuffer = toOwnedBuffer(outBytes);
 
   return {
     type: 'done',
     id,
     outputBuffer,
+    thumbnailBuffer,
     width: composed.width,
     height: composed.height,
     originalWidth,
@@ -127,7 +209,11 @@ if (isDedicatedWorker) {
         const msg: WorkerResponse = { type: 'progress', id: req.id, stage, progress };
         workerScope.postMessage(msg);
       });
-      workerScope.postMessage(result, [result.outputBuffer]);
+      const transfer: Transferable[] = [result.outputBuffer];
+      if (result.thumbnailBuffer) {
+        transfer.push(result.thumbnailBuffer);
+      }
+      workerScope.postMessage(result, transfer);
     } catch (err) {
       const code = err instanceof PipelineError ? err.code : 'DECODE_FAILED';
       const message =

@@ -1,6 +1,11 @@
-import { PipelineError, type RawImageData } from './types';
+import {
+  PipelineError,
+  TARGET_SIZE_DEFAULT_KB,
+  type QualityPreset,
+  type RawImageData
+} from './types';
 
-export type QualityPreset = 'best' | 'smaller' | 'lossless' | 'target';
+export { TARGET_SIZE_DEFAULT_KB, type QualityPreset };
 
 export const PRESET_QUALITY = {
   best: 82,
@@ -9,7 +14,6 @@ export const PRESET_QUALITY = {
 
 export const TARGET_SIZE_MIN_QUALITY = 50;
 export const TARGET_SIZE_MAX_QUALITY = PRESET_QUALITY.best;
-export const TARGET_SIZE_DEFAULT_KB = 150;
 export const TARGET_SIZE_MAX_ENCODES = 7;
 
 export interface EncodeOptions {

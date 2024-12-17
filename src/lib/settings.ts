@@ -1,7 +1,11 @@
-import { TARGET_SIZE_DEFAULT_KB, type QualityPreset } from './pipeline/encode';
 import type { FitMode } from './pipeline/geometry';
 import type { BackgroundOption } from './pipeline/resize';
-import { MAX_FILES, MAX_FILE_BYTES } from './pipeline/types';
+import {
+  MAX_FILES,
+  MAX_FILE_BYTES,
+  TARGET_SIZE_DEFAULT_KB,
+  type QualityPreset
+} from './pipeline/types';
 import type { ProcessSettings } from './worker/protocol';
 
 export type SizePreset = '800' | '1000' | '1200' | '2000' | 'custom' | 'keep';

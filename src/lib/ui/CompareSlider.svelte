@@ -199,7 +199,7 @@
         <!-- Before (original) clipped to the left side of the divider -->
         {#if item.originalUrl}
           <div
-            class="pointer-events-none absolute inset-0"
+            class="checkerboard pointer-events-none absolute inset-0"
             style="clip-path: inset(0 {100 - position}% 0 0)"
           >
             <img
