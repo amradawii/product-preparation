@@ -62,9 +62,10 @@ afterEach(() => {
 });
 
 function makeJsdomFile(bytes: Uint8Array, name: string, type: string): File {
-  const file = new File([bytes], name, { type });
+  const copy = new Uint8Array(bytes);
+  const file = new File([copy], name, { type });
   Object.defineProperty(file, 'arrayBuffer', {
-    value: async () => bytes.slice().buffer
+    value: async () => copy.slice().buffer
   });
   return file;
 }

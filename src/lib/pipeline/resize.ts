@@ -36,10 +36,13 @@ export function parseHexColor(hex: string): [number, number, number] {
 }
 
 function toExactImageData(image: RawImageData): ImageData {
-  let buf = image.data;
-  if (buf.byteOffset !== 0 || buf.byteLength !== buf.buffer.byteLength) {
-    buf = new Uint8ClampedArray(buf);
-  }
+  const src = image.data;
+  const buf: Uint8ClampedArray<ArrayBuffer> =
+    src.buffer instanceof ArrayBuffer &&
+    src.byteOffset === 0 &&
+    src.byteLength === src.buffer.byteLength
+      ? (src as Uint8ClampedArray<ArrayBuffer>)
+      : new Uint8ClampedArray(src);
   if (typeof ImageData !== 'undefined') {
     return new ImageData(buf, image.width, image.height);
   }

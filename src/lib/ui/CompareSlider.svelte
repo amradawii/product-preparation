@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { formatSavingsLabel, type BatchItem } from '$lib/batch';
-  import { formatBytes } from '$lib/settings';
+  import { formatSavingsLabel, type BatchItem } from '#lib/batch';
+  import { formatBytes } from '#lib/settings';
 
   interface Props {
     item: BatchItem;
@@ -150,9 +150,9 @@
             ({item.width} × {item.height})
           {/if}
           {#if savings}
-            · <span class={savings.isSmaller ? 'font-medium text-emerald-700' : 'text-zinc-600'}
-              >{savings.label}</span
-            >
+            · <span class={savings.isSmaller ? 'font-medium text-emerald-700' : 'text-zinc-600'}>
+              {savings.label}
+            </span>
           {/if}
         </p>
       </div>
@@ -180,6 +180,7 @@
     <div class="flex flex-1 items-center justify-center overflow-hidden bg-zinc-100/70 p-4">
       <div
         bind:this={stageEl}
+        role="presentation"
         onpointerdown={handlePointerDown}
         onpointermove={handlePointerMove}
         onpointerup={handlePointerUp}

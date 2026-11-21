@@ -273,8 +273,8 @@ function inspectBmp(bytes: Uint8Array): ImageInfo {
     throw new PipelineError('CORRUPT_IMAGE', 'This BMP file has a damaged header.');
   }
   const dibSize = readUint32LE(bytes, 14);
-  let width = 0;
-  let height = 0;
+  let width: number;
+  let height: number;
   if (dibSize === 12) {
     width = readUint16LE(bytes, 18);
     height = readUint16LE(bytes, 20);

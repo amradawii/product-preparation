@@ -148,7 +148,7 @@ export function decodeBmp(bytes: Uint8Array): RawImageData {
         out[dstIdx + 2] = extractChannel(v, bMask, bInfo.shift, bInfo.max);
         out[dstIdx + 3] = aInfo.max > 0 ? extractChannel(v, aMask, aInfo.shift, aInfo.max) : 255;
       } else if (bpp === 8 || bpp === 4 || bpp === 1) {
-        let colorIdx = 0;
+        let colorIdx: number;
         if (bpp === 8) {
           colorIdx = bytes[rowStart + x];
         } else if (bpp === 4) {

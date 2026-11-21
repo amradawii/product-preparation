@@ -51,7 +51,7 @@ Everything runs locally in your browser. Your photos are never uploaded to a ser
 
 ## Run locally
 
-Requires **Node.js 20 or 22 LTS**.
+Requires **Node.js 24 LTS** (or 22.22+).
 
 ```bash
 npm install
@@ -81,7 +81,7 @@ ProductPrep builds to plain static files (`@sveltejs/adapter-static`), so it dep
 1. Connect the repository in Cloudflare Pages.
 2. Set **Build command** to `npm run build`.
 3. Set **Build output directory** to `build`.
-4. Set environment variable `NODE_VERSION` to `20` (or `22`).
+4. Set environment variable `NODE_VERSION` to `24`.
 
 No server runtime, environment secrets, or database are required.
 

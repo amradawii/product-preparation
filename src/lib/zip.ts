@@ -45,8 +45,8 @@ function feedBytes(stream: ZipPassThrough, bytes: Uint8Array): void {
 export async function createStreamingZipChunks(
   entries: readonly ZipEntryInput[],
   onProgress?: (completed: number, total: number) => void
-): Promise<Uint8Array[]> {
-  const chunks: Uint8Array[] = [];
+): Promise<Uint8Array<ArrayBuffer>[]> {
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
 
   let zipError: Error | null = null;
   const zip = new Zip((err, data) => {
@@ -55,7 +55,11 @@ export async function createStreamingZipChunks(
       return;
     }
     if (data && data.byteLength > 0) {
-      chunks.push(data);
+      chunks.push(
+        data.buffer instanceof ArrayBuffer
+          ? (data as Uint8Array<ArrayBuffer>)
+          : new Uint8Array(data)
+      );
     }
   });
 

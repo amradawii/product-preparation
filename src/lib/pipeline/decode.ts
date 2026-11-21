@@ -128,6 +128,12 @@ async function decodeWithFallback(bytes: Uint8Array, info: ImageInfo): Promise<R
     case 'avif': {
       const { default: decodeAvif } = await import('@jsquash/avif/decode');
       const result = await decodeAvif(toArrayBuffer(bytes));
+      if (!result) {
+        throw new PipelineError(
+          'CORRUPT_IMAGE',
+          'Could not decode this AVIF image; the file appears to be damaged.'
+        );
+      }
       return { width: result.width, height: result.height, data: result.data };
     }
 

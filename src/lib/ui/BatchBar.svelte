@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatBatchSummary, type BatchStats } from '$lib/batch';
+  import { formatBatchSummary, type BatchStats } from '#lib/batch';
 
   interface Props {
     stats: BatchStats;

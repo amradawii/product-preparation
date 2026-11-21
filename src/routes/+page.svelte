@@ -6,9 +6,9 @@
     revokeItemUrls,
     triggerBlobDownload,
     type BatchItem
-  } from '$lib/batch';
-  import { assignUniqueName } from '$lib/pipeline/names';
-  import { MAX_FILES } from '$lib/pipeline/types';
+  } from '#lib/batch';
+  import { assignUniqueName } from '#lib/pipeline/names';
+  import { MAX_FILES } from '#lib/pipeline/types';
   import {
     DEFAULT_SETTINGS,
     loadSettings,
@@ -18,14 +18,14 @@
     validateIncomingFiles,
     type FileRejection,
     type UserSettings
-  } from '$lib/settings';
-  import BatchBar from '$lib/ui/BatchBar.svelte';
-  import CompareSlider from '$lib/ui/CompareSlider.svelte';
-  import DropZone from '$lib/ui/DropZone.svelte';
-  import ResultCard from '$lib/ui/ResultCard.svelte';
-  import SettingsBar from '$lib/ui/SettingsBar.svelte';
-  import { ImageWorkerPool } from '$lib/worker/pool';
-  import { buildZipFilename, createStreamingZip } from '$lib/zip';
+  } from '#lib/settings';
+  import BatchBar from '#lib/ui/BatchBar.svelte';
+  import CompareSlider from '#lib/ui/CompareSlider.svelte';
+  import DropZone from '#lib/ui/DropZone.svelte';
+  import ResultCard from '#lib/ui/ResultCard.svelte';
+  import SettingsBar from '#lib/ui/SettingsBar.svelte';
+  import { ImageWorkerPool } from '#lib/worker/pool';
+  import { buildZipFilename, createStreamingZip } from '#lib/zip';
 
   let settings = $state<UserSettings>({ ...DEFAULT_SETTINGS });
   let appliedSettings = $state<UserSettings | null>(null);

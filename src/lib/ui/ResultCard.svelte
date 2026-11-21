@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { formatSavingsLabel, type BatchItem } from '$lib/batch';
-  import { formatBytes } from '$lib/settings';
+  import { formatSavingsLabel, type BatchItem } from '#lib/batch';
+  import { formatBytes } from '#lib/settings';
 
   interface Props {
     item: BatchItem;

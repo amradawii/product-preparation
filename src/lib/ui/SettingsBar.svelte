@@ -7,9 +7,9 @@
     type BackgroundPreset,
     type SizePreset,
     type UserSettings
-  } from '$lib/settings';
-  import { CUSTOM_QUALITY_STEPS, type QualityPreset } from '$lib/pipeline/types';
-  import type { FitMode } from '$lib/pipeline/geometry';
+  } from '#lib/settings';
+  import { CUSTOM_QUALITY_STEPS, type QualityPreset } from '#lib/pipeline/types';
+  import type { FitMode } from '#lib/pipeline/geometry';
 
   interface Props {
     settings: UserSettings;
