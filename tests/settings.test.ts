@@ -49,6 +49,7 @@ describe('settings persistence and conversion', () => {
       backgroundPreset: 'custom',
       backgroundColor: '#f5f5f4',
       qualityPreset: 'target',
+      customQuality: 85,
       targetKb: 120,
       noEnlarge: false
     };
@@ -65,6 +66,7 @@ describe('settings persistence and conversion', () => {
       noEnlarge: false,
       background: { type: 'color', hex: '#f5f5f4' },
       qualityPreset: 'target',
+      customQuality: 85,
       targetKb: 120
     });
   });
@@ -76,6 +78,12 @@ describe('settings persistence and conversion', () => {
     );
     expect(
       settingsEqual(DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, backgroundPreset: 'transparent' })
+    ).toBe(false);
+    expect(
+      settingsEqual(
+        { ...DEFAULT_SETTINGS, qualityPreset: 'custom', customQuality: 90 },
+        { ...DEFAULT_SETTINGS, qualityPreset: 'custom', customQuality: 60 }
+      )
     ).toBe(false);
   });
 

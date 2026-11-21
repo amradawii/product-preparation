@@ -324,12 +324,24 @@
   <header class="border-b border-zinc-200/80 bg-white">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3.5">
       <div class="flex items-center gap-2.5">
-        <span
-          class="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-900"
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 32 32"
+          fill="none"
           aria-hidden="true"
+          class="h-6 w-6 shrink-0"
         >
-          <span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>
-        </span>
+          <rect width="32" height="32" rx="8" fill="#18181B" />
+          <rect x="7" y="7" width="18" height="18" rx="3" stroke="#FAFAFA" stroke-width="2" />
+          <circle cx="13" cy="13" r="2" fill="#10B981" />
+          <path
+            d="M9.5 21.5L14.5 16.5L18 20L20.5 17.5L23.5 21.5"
+            stroke="#10B981"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
         <span class="text-[15px] font-semibold tracking-tight text-zinc-900">ProductPrep</span>
       </div>
       <span class="text-xs text-zinc-500">Your images never leave your device</span>

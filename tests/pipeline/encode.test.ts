@@ -73,6 +73,20 @@ describe('encodeWebp', () => {
     expect(smaller.bytes.byteLength).toBeLessThan(best.bytes.byteLength);
   });
 
+  it('encodes custom percentage quality presets (e.g. 95% vs 30%) cleanly', async () => {
+    const img = makeRichTestImage(160, 120);
+
+    const high = await encodeWebp(img, { preset: 'custom', quality: 95 });
+    const low = await encodeWebp(img, { preset: 'custom', quality: 30 });
+
+    expect(high.lossless).toBe(false);
+    expect(high.quality).toBe(95);
+    expect(low.quality).toBe(30);
+    expect(detectFormat(high.bytes)).toBe('webp');
+    expect(detectFormat(low.bytes)).toBe('webp');
+    expect(low.bytes.byteLength).toBeLessThan(high.bytes.byteLength);
+  });
+
   it('produces a bit-identical lossless round-trip including semi-transparent and alpha=0 pixels', async () => {
     const width = 16;
     const height = 16;

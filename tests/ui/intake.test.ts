@@ -115,4 +115,24 @@ describe('drop zone and settings bar', () => {
     await fireEvent.change(screen.getByLabelText('Size'), { target: { value: '1000' } });
     expect(screen.getByRole('button', { name: 'Apply to all images' })).toBeInTheDocument();
   });
+
+  it('offers Custom (%) quality from 95% down to 10% alongside existing presets and persists it', async () => {
+    render(Page);
+
+    const qualitySelect = screen.getByLabelText('Quality') as HTMLSelectElement;
+    const optionValues = Array.from(qualitySelect.options).map((o) => o.value);
+    expect(optionValues).toEqual(['best', 'smaller', 'lossless', 'target', 'custom']);
+
+    await fireEvent.change(qualitySelect, { target: { value: 'custom' } });
+    const pctSelect = screen.getByLabelText('Custom quality percentage') as HTMLSelectElement;
+    const pctValues = Array.from(pctSelect.options).map((o) => o.value);
+    expect(pctValues[0]).toBe('95');
+    expect(pctValues[pctValues.length - 1]).toBe('10');
+    expect(pctValues).toHaveLength(18);
+
+    await fireEvent.change(pctSelect, { target: { value: '60' } });
+    expect(pctSelect.value).toBe('60');
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('"qualityPreset":"custom"');
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('"customQuality":60');
+  });
 });

@@ -8,7 +8,7 @@
     type SizePreset,
     type UserSettings
   } from '$lib/settings';
-  import type { QualityPreset } from '$lib/pipeline/encode';
+  import { CUSTOM_QUALITY_STEPS, type QualityPreset } from '$lib/pipeline/types';
   import type { FitMode } from '$lib/pipeline/geometry';
 
   interface Props {
@@ -74,6 +74,12 @@
     update({
       qualityPreset: (event.currentTarget as HTMLSelectElement).value as QualityPreset
     });
+  }
+
+  function handleCustomQuality(event: Event) {
+    const raw = Number.parseInt((event.currentTarget as HTMLSelectElement).value, 10);
+    if (!Number.isFinite(raw)) return;
+    update({ customQuality: raw });
   }
 
   function handleTargetKb(event: Event) {
@@ -216,7 +222,21 @@
           <option value="smaller">Smaller files</option>
           <option value="lossless">Lossless</option>
           <option value="target">Target size</option>
+          <option value="custom">Custom (%)</option>
         </select>
+
+        {#if settings.qualityPreset === 'custom'}
+          <select
+            aria-label="Custom quality percentage"
+            value={settings.customQuality}
+            onchange={handleCustomQuality}
+            class="h-9 shrink-0 rounded-lg border border-zinc-200 bg-white px-2 text-sm tabular-nums text-zinc-900 transition-colors hover:border-zinc-300"
+          >
+            {#each CUSTOM_QUALITY_STEPS as pct (pct)}
+              <option value={pct}>{pct}%</option>
+            {/each}
+          </select>
+        {/if}
 
         {#if settings.qualityPreset === 'target'}
           <div class="flex shrink-0 items-center gap-1">

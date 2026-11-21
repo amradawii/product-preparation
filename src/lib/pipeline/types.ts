@@ -7,8 +7,12 @@ export const MAX_FILE_BYTES = 40 * 1024 * 1024;
 export const MAX_MEGAPIXELS = 50;
 export const MAX_PIXELS = MAX_MEGAPIXELS * 1_000_000;
 export const TARGET_SIZE_DEFAULT_KB = 150;
+export const DEFAULT_CUSTOM_QUALITY = 85;
+export const CUSTOM_QUALITY_STEPS = [
+  95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10
+] as const;
 
-export type QualityPreset = 'best' | 'smaller' | 'lossless' | 'target';
+export type QualityPreset = 'best' | 'smaller' | 'lossless' | 'target' | 'custom';
 
 export interface RawImageData {
   width: number;

@@ -13,7 +13,7 @@ A free, fast web tool that turns inconsistent product photos into clean, store-r
 - **Never stretches photos:** Fit inside with padding (`800 × 800`, `1000 × 1000`, `1200 × 1200`, `2000 × 2000`, custom `Width × Height` with an optional square lock, or keep original dimensions) or centre-crop to fill.
 - **No accidental upscaling:** Small images stay sharp and centred on the canvas when "Don't enlarge small images" is on (vectors always rasterise cleanly at target size).
 - **Clean backgrounds:** Fill padding and transparent images with white, a custom colour, or keep transparency intact.
-- **Store-ready WebP compression:** Encoded with Google's `libwebp` compiled to WebAssembly (`Best for stores`, `Smaller files`, bit-exact `Lossless`, or `Target size` binary search with a quality floor).
+- **Store-ready WebP compression:** Encoded with Google's `libwebp` compiled to WebAssembly (`Best for stores`, `Smaller files`, bit-exact `Lossless`, `Target size` binary search with a quality floor, or `Custom (%)` from `95%` down to `10%`).
 - **Phone photos stay upright & private:** EXIF orientation is respected before resizing, and all EXIF, XMP, and ICC metadata is stripped from outputs.
 - **Bulk processing & streaming zip:** Runs across a pool of Web Workers so the tab stays responsive, with before/after inspection, per-image downloads, clean Unicode-safe filenames, and instant streaming `.zip` export.
 - **Keyboard & clipboard friendly:** Paste images straight from the clipboard and control settings, cards, and the before/after slider from the keyboard.

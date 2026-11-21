@@ -146,6 +146,7 @@ export async function runPipelineJob(
   onProgress?.('encoding', 0.8);
   const encoded = await encodeWebp(composed, {
     preset: settings.qualityPreset,
+    quality: settings.qualityPreset === 'custom' ? settings.customQuality : undefined,
     targetBytes: settings.targetKb * 1024
   });
 

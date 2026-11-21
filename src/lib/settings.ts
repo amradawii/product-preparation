@@ -1,6 +1,8 @@
 import type { FitMode } from './pipeline/geometry';
 import type { BackgroundOption } from './pipeline/resize';
 import {
+  CUSTOM_QUALITY_STEPS,
+  DEFAULT_CUSTOM_QUALITY,
   MAX_FILES,
   MAX_FILE_BYTES,
   TARGET_SIZE_DEFAULT_KB,
@@ -20,6 +22,7 @@ export interface UserSettings {
   backgroundPreset: BackgroundPreset;
   backgroundColor: string;
   qualityPreset: QualityPreset;
+  customQuality: number;
   targetKb: number;
   noEnlarge: boolean;
 }
@@ -40,6 +43,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   backgroundPreset: 'white',
   backgroundColor: '#f4f4f5',
   qualityPreset: 'best',
+  customQuality: DEFAULT_CUSTOM_QUALITY,
   targetKb: TARGET_SIZE_DEFAULT_KB,
   noEnlarge: true
 };
@@ -47,7 +51,14 @@ export const DEFAULT_SETTINGS: UserSettings = {
 const VALID_SIZE_PRESETS = new Set<SizePreset>(['800', '1000', '1200', '2000', 'custom', 'keep']);
 const VALID_FIT_MODES = new Set<FitMode>(['fit', 'fill']);
 const VALID_BG_PRESETS = new Set<BackgroundPreset>(['white', 'custom', 'transparent']);
-const VALID_QUALITY_PRESETS = new Set<QualityPreset>(['best', 'smaller', 'lossless', 'target']);
+const VALID_QUALITY_PRESETS = new Set<QualityPreset>([
+  'best',
+  'smaller',
+  'lossless',
+  'target',
+  'custom'
+]);
+const VALID_CUSTOM_QUALITIES = new Set<number>(CUSTOM_QUALITY_STEPS);
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
@@ -98,6 +109,10 @@ export function sanitizeSettings(raw: unknown): UserSettings {
     qualityPreset: VALID_QUALITY_PRESETS.has(obj.qualityPreset as QualityPreset)
       ? (obj.qualityPreset as QualityPreset)
       : DEFAULT_SETTINGS.qualityPreset,
+    customQuality:
+      typeof obj.customQuality === 'number' && VALID_CUSTOM_QUALITIES.has(obj.customQuality)
+        ? obj.customQuality
+        : DEFAULT_SETTINGS.customQuality,
     targetKb: clampInt(obj.targetKb, MIN_TARGET_KB, MAX_TARGET_KB, DEFAULT_SETTINGS.targetKb),
     noEnlarge: typeof obj.noEnlarge === 'boolean' ? obj.noEnlarge : DEFAULT_SETTINGS.noEnlarge
   };
@@ -171,6 +186,9 @@ export function toProcessSettings(settings: UserSettings): ProcessSettings {
     noEnlarge: settings.noEnlarge,
     background,
     qualityPreset: settings.qualityPreset,
+    customQuality: VALID_CUSTOM_QUALITIES.has(settings.customQuality)
+      ? settings.customQuality
+      : DEFAULT_SETTINGS.customQuality,
     targetKb: clampInt(settings.targetKb, MIN_TARGET_KB, MAX_TARGET_KB, DEFAULT_SETTINGS.targetKb)
   };
 }
@@ -191,6 +209,7 @@ export function settingsEqual(a: UserSettings, b: UserSettings): boolean {
     pa.noEnlarge === pb.noEnlarge &&
     bgSame &&
     pa.qualityPreset === pb.qualityPreset &&
+    (pa.qualityPreset !== 'custom' || pa.customQuality === pb.customQuality) &&
     (pa.qualityPreset !== 'target' || pa.targetKb === pb.targetKb)
   );
 }

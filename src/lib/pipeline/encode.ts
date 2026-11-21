@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CUSTOM_QUALITY,
   PipelineError,
   TARGET_SIZE_DEFAULT_KB,
   type QualityPreset,
@@ -303,6 +304,20 @@ export async function encodeWebp(
       minQuality: options.minQuality,
       maxQuality: options.maxQuality
     });
+  }
+
+  if (options.preset === 'custom') {
+    const quality = Math.max(
+      10,
+      Math.min(95, Math.round(options.quality ?? DEFAULT_CUSTOM_QUALITY))
+    );
+    const bytes = await encodeWebpAtQuality(image, quality);
+    return {
+      bytes,
+      quality,
+      lossless: false,
+      encodeCount: 1
+    };
   }
 
   const quality = options.quality ?? PRESET_QUALITY[options.preset];

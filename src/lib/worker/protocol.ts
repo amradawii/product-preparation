@@ -11,6 +11,7 @@ export interface ProcessSettings {
   noEnlarge: boolean;
   background: BackgroundOption;
   qualityPreset: QualityPreset;
+  customQuality?: number;
   targetKb: number;
 }
 
